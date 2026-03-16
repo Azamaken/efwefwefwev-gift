@@ -775,21 +775,21 @@ def admin_add_gift_keyboard(state: dict) -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn(f"🆔 Gift ID: {gift_id}", "admin_edit_gift_id", style="primary")],
-            [btn(f"🏷 Название: {title}", "admin_edit_title", style="primary")],
-            [btn(f"<tg-emoji emoji-id='5310224206732996002'>⭐</tg-emoji> Цена: {price}", "admin_edit_price", style="primary")],
-            [btn(f"😀 Emoji ID: {emoji_id}", "admin_edit_emoji", style="primary")],
-            [btn(f"📌 Закреп: {pinned}", "admin_toggle_pinned", style="success")],
-            [btn("✅ Сохранить", "admin_save_gift", style="success")],
-            [btn("⬅️ Отмена", "admin_back", style="danger")],
+            [btn(f"Gift ID: {gift_id}", "admin_edit_gift_id", style="primary", emoji_id = '5258466217273871977')],
+            [btn(f"Название: {title}", "admin_edit_title", style="primary", emoji_id = '5364265065799239497')],
+            [btn(f"Цена: {price}", "admin_edit_price", style="primary", emoji_id = '5310224206732996002')],
+            [btn(f"Emoji ID: {emoji_id}", "admin_edit_emoji", style="primary", emoji_id = '5451694541063074067')],
+            [btn(f"Закреп: {pinned}", "admin_toggle_pinned", style="success", emoji_id = '5397782960512444700')],
+            [btn("Сохранить", "admin_save_gift", style="success", emoji_id = '5206607081334906820')],
+            [btn("Отмена", "admin_back", style="danger", emoji_id = '5416113713428057601')],
         ]
     )
 
 def admin_save_confirm_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn("✅ Да, добавить", "admin_confirm_save_gift", style="success")],
-            [btn(" Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')],
+            [btn("Да, добавить", "admin_confirm_save_gift", style="success", emoji_id = '5206607081334906820')],
+            [btn("Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')],
         ]
     )
 
