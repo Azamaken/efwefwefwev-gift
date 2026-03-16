@@ -598,11 +598,11 @@ def comment_keyboard() -> InlineKeyboardMarkup:
 
 
 def confirm_keyboard(selected_sender: str) -> InlineKeyboardMarkup:
-    pay_text = "<tg-emoji emoji-id='5310224206732996002'>⭐</tg-emoji> Оплатить звёздами" if selected_sender == "bot" else f"<tg-emoji emoji-id='5280615440928758599'>🎁</tg-emoji> Отправить от @{ACCOUNT_USERNAME}"
+    pay_text = "Оплатить звёздами" if selected_sender == "bot" else f"<tg-emoji emoji-id='5280615440928758599'>🎁</tg-emoji> Отправить от @{ACCOUNT_USERNAME}"
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn(pay_text, "pay_now", style="primary")],
-            [btn(" Назад", "back_comment", style="danger", emoji_id = '5416113713428057601')],
+            [btn(pay_text, "pay_now", style="primary", emoji_id = '5310224206732996002')],
+            [btn("Назад", "back_comment", style="danger", emoji_id = '5416113713428057601')],
             [btn("✖ Отмена", "cancel", style="danger")],
         ]
     )
@@ -610,15 +610,15 @@ def confirm_keyboard(selected_sender: str) -> InlineKeyboardMarkup:
 def information_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn(" Назад", "back_main", style="default", emoji_id = '5416113713428057601')],
+            [btn("Назад", "back_main", style="default", emoji_id = '5416113713428057601')],
         ]
     )
 
 def profile_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn(" История", "profile_history", style="primary", emoji_id = '5220046725493828505')],
-            [btn(" Назад", "back_main", style="danger", emoji_id = '5416113713428057601')],
+            [btn("История", "profile_history", style="primary", emoji_id = '5220046725493828505')],
+            [btn("Назад", "back_main", style="danger", emoji_id = '5416113713428057601')],
         ]
     )
 
@@ -626,8 +626,8 @@ def profile_keyboard() -> InlineKeyboardMarkup:
 def history_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn(" Назад в профиль", "profile", style="primary", emoji_id = '5416113713428057601')],
-            [btn(" В меню", "back_main", style="danger", emoji_id = '5395831812704452001')],
+            [btn("Назад в профиль", "profile", style="primary", emoji_id = '5416113713428057601')],
+            [btn("В меню", "back_main", style="danger", emoji_id = '5395831812704452001')],
         ]
     )
 
@@ -644,20 +644,20 @@ def history_keyboard(page: int, total_pages: int) -> InlineKeyboardMarkup:
 
     rows = [nav_row] if nav_row else []
 
-    rows.append([btn(" Назад в профиль", "profile", style="primary", emoji_id = '5416113713428057601')])
-    rows.append([btn(" В меню", "back_main", style="danger", emoji_id = '5395831812704452001')])
+    rows.append([btn("Назад в профиль", "profile", style="primary", emoji_id = '5416113713428057601')])
+    rows.append([btn("В меню", "back_main", style="danger", emoji_id = '5395831812704452001')])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def admin_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [btn(" Отправить подарок", "admin_send_gift", style="success", emoji_id = '5280615440928758599')],
-            [btn(" Добавить подарок", "admin_add_gift", style="primary", emoji_id = '5397916757333654639')],
-            [btn(" Мои подарки", "admin_list_gifts", style="primary", emoji_id = '5258500400918587241')],
-            [btn(" Каналы подписки", "admin_channels", style="primary", emoji_id = '5395831812704452001')],
-            [btn(" Рассылка", "admin_broadcast", style="primary", emoji_id = '5370599459661045441')],
-            [btn(" Назад", "back_main", style="danger", emoji_id = '5416113713428057601')],
+            [btn("Отправить подарок", "admin_send_gift", style="success", emoji_id = '5280615440928758599')],
+            [btn("Добавить подарок", "admin_add_gift", style="primary", emoji_id = '5397916757333654639')],
+            [btn("Мои подарки", "admin_list_gifts", style="primary", emoji_id = '5258500400918587241')],
+            [btn("Каналы подписки", "admin_channels", style="primary", emoji_id = '5395831812704452001')],
+            [btn("Рассылка", "admin_broadcast", style="primary", emoji_id = '5370599459661045441')],
+            [btn("Назад", "back_main", style="danger", emoji_id = '5416113713428057601')],
         ]
     )
 
@@ -682,8 +682,8 @@ def admin_channels_keyboard():
             btn("🗑",f"channel_delete:{cid}")
         ])
 
-    rows.append([btn(" Добавить канал","channel_add", emoji_id = '5397916757333654639')])
-    rows.append([btn(" Назад","admin_panel", emoji_id = '5416113713428057601')])
+    rows.append([btn("Добавить канал","channel_add", emoji_id = '5397916757333654639')])
+    rows.append([btn("Назад","admin_panel", emoji_id = '5416113713428057601')])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -700,7 +700,7 @@ def channel_edit_keyboard(channel_id):
 
             [btn("🗑 Удалить",f"channel_delete:{channel_id}")],
 
-            [btn(" Назад","admin_channels", emoji_id = '5416113713428057601')]
+            [btn("Назад","admin_channels", emoji_id = '5416113713428057601')]
         ]
     )
 
@@ -708,10 +708,10 @@ def admin_sender_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                btn(" От бота", "admin_sender:bot", style="success", emoji_id = '5355051922862653659'),
-                btn(f" От @{ACCOUNT_USERNAME}", "admin_sender:account", style="primary", emoji_id = '5364052602357044385'),
+                btn("От бота", "admin_sender:bot", style="success", emoji_id = '5355051922862653659'),
+                btn(f"От @{ACCOUNT_USERNAME}", "admin_sender:account", style="primary", emoji_id = '5364052602357044385'),
             ],
-            [btn(" Назад", "admin_back", style="danger", emoji_id = '5416113713428057601')]
+            [btn("Назад", "admin_back", style="danger", emoji_id = '5416113713428057601')]
         ]
     )
 
@@ -728,7 +728,7 @@ def broadcast_keyboard():
 
             [btn("📊 Статистика","bc_stats")],
 
-            [btn(" Назад","admin_panel", emoji_id = '5416113713428057601')]
+            [btn("Назад","admin_panel", emoji_id = '5416113713428057601')]
         ]
     )
 
@@ -803,7 +803,7 @@ def admin_gifts_keyboard() -> InlineKeyboardMarkup:
         ])
 
     rows.append([btn("➕ Добавить подарок", "admin_add_gift", style="primary")])
-    rows.append([btn(" Назад", "admin_back", style="danger", emoji_id = '5416113713428057601')])
+    rows.append([btn("Назад", "admin_back", style="danger", emoji_id = '5416113713428057601')])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -823,7 +823,7 @@ def admin_comment_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [btn("✎ Ввести комментарий", "admin_comment_custom", style="primary")],
             [btn("✦ Без текста", "admin_comment_none", style="success")],
-            [btn(" Назад", "admin_back", style="danger", emoji_id = '5416113713428057601')],
+            [btn("Назад", "admin_back", style="danger", emoji_id = '5416113713428057601')],
         ]
     )
 
@@ -939,15 +939,15 @@ def gifts_keyboard() -> InlineKeyboardMarkup:
         return local_rows
 
     if custom_gifts:
-        rows.append([btn(" Старые подарки", "noop", style="primary", emoji_id = '5397782960512444700')])
+        rows.append([btn("Старые подарки", "noop", style="primary", emoji_id = '5397782960512444700')])
         rows.extend(build_two_col_rows(custom_gifts))
 
     if api_gifts:
-        rows.append([btn(" Обычные подарки", "noop", style="primary", emoji_id = '5280615440928758599')])
+        rows.append([btn("Обычные подарки", "noop", style="primary", emoji_id = '5280615440928758599')])
         rows.extend(build_two_col_rows(api_gifts))
 
-    rows.append([btn(" Обновить подарки", "refresh_gifts", style="primary", emoji_id = '5292226786229236118')])
-    rows.append([btn(" Назад", "back_main", style="danger", emoji_id = '5416113713428057601')])
+    rows.append([btn("Обновить подарки", "refresh_gifts", style="primary", emoji_id = '5292226786229236118')])
+    rows.append([btn("Назад", "back_main", style="danger", emoji_id = '5416113713428057601')])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -1812,7 +1812,7 @@ async def callbacks(q: CallbackQuery, bot: Bot):
             "<b>🆔 Введи Gift ID</b>",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[btn(" Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')]]
+                inline_keyboard=[[btn("Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')]]
             ),
         )
         await q.answer()
@@ -1824,7 +1824,7 @@ async def callbacks(q: CallbackQuery, bot: Bot):
             "<b>🏷 Введи название подарка</b>",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[btn(" Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')]]
+                inline_keyboard=[[btn("Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')]]
             ),
         )
         await q.answer()
@@ -1836,7 +1836,7 @@ async def callbacks(q: CallbackQuery, bot: Bot):
             "<b><tg-emoji emoji-id='5310224206732996002'>⭐</tg-emoji> Введи цену в звёздах</b>",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[btn(" Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')]]
+                inline_keyboard=[[btn("Назад", "admin_add_gift", style="danger", emoji_id = '5416113713428057601')]]
             ),
         )
         await q.answer()
