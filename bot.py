@@ -653,11 +653,21 @@ def admin_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [btn("Отправить подарок", "admin_send_gift", style="success", emoji_id = '5280615440928758599')],
+            [btn("Отправить подарок без оплаты", "admin_send_free", style="success", emoji_id = '5280615440928758599')],
             [btn("Добавить подарок", "admin_add_gift", style="primary", emoji_id = '5397916757333654639')],
             [btn("Мои подарки", "admin_list_gifts", style="primary", emoji_id = '5258500400918587241')],
             [btn("Каналы подписки", "admin_channels", style="primary", emoji_id = '5395831812704452001')],
             [btn("Рассылка", "admin_broadcast", style="primary", emoji_id = '5370599459661045441')],
             [btn("Назад", "back_main", style="danger", emoji_id = '5416113713428057601')],
+        ]
+    )
+
+def admin_send_comment_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [btn("✦ Без текста", "admin_send_comment_none", style="success")],
+            [btn("✎ Свой текст", "admin_send_comment_custom", style="primary")],
+            [btn("⬅️ Назад", "admin_back", style="danger")],
         ]
     )
 
@@ -1062,7 +1072,10 @@ def build_summary(state: Dict[str, Any]) -> str:
     if state.get("is_custom_comment") and state.get("target_user_id") != state.get("from_user_id") and not state.get("admin_send_mode", False):
         extra_note = "\n<b>Надбавка за свой текст:</b> 5 <tg-emoji emoji-id='5310224206732996002'>"
 
-    price_line = f"<b>Цена:</b> {stars} <tg-emoji emoji-id='5310224206732996002'>⭐️</tg-emoji>" if sender_type == "bot" else "<b>Оплата:</b> со Stars аккаунта"
+    if state.get("admin_send_mode"):
+       price_line = "<b>Оплата:</b> без invoice, с баланса бота"
+    else:
+       price_line = f"<b>Цена:</b> {stars} ⭐️" if sender_type == "bot" else "<b>Оплата:</b> со Stars аккаунта"
 
     return (
         "<b><tg-emoji emoji-id='5280615440928758599'>🎁</tg-emoji> Подтверждение заказа</b>\n\n"
@@ -1407,6 +1420,18 @@ async def callbacks(q: CallbackQuery, bot: Bot):
     if data.startswith("gift:"):
         gift_id = data.split(":", 1)[1]
         state["gift_id"] = gift_id
+
+        if state.get("admin_send_mode"):
+            state["step"] = "admin_send_recipient"
+
+            await q.message.edit_text(
+                "<b>👤 Введите numeric user_id получателя</b>\n\n"
+                "Пример: <code>123456789</code>",
+                parse_mode="HTML",
+            )
+            await q.answer()
+            return
+
         state["step"] = "recipient"
         await q.message.edit_text(
             "<b>👤 Кому отправить подарок?</b>\n\n"
@@ -2049,7 +2074,34 @@ async def callbacks(q: CallbackQuery, bot: Bot):
         )
         await q.answer()
         return
+    
+    if data == "admin_send_comment_none":
+        state["gift_text"] = ""
+        state["step"] = "admin_send_confirm"
 
+        await q.message.edit_text(
+            build_summary(state),
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                 [btn("🎁 Отправить сейчас", "admin_send_now", style="success")],
+                    [btn("⬅️ Назад", "admin_back", style="danger")],
+                ]
+         ),
+     )
+        await q.answer()
+        return
+
+    if data == "admin_send_comment_custom":
+        state["step"] = "admin_send_comment_input"
+
+        await q.message.edit_text(
+            "<b>✍️ Напишите комментарий</b>\n\n"
+            "<i>Максимум 128 символов</i>",
+            parse_mode="HTML",
+        )
+        await q.answer()
+        return
 
     if data == "bc_custom":
         user_states[chat_id]["step"] = "broadcast_text"
@@ -2090,7 +2142,88 @@ async def callbacks(q: CallbackQuery, bot: Bot):
         )
         await q.answer()
         return
+    
+    if data == "admin_send_now":
+        if user_id != ADMIN_ID:
+            await q.answer()
+            return
 
+        try:
+            await q.message.edit_text(
+                "<b>⏳ Отправляю подарок...</b>",
+                parse_mode="HTML",
+            )
+
+            await send_gift_via_bot(
+                user_id=int(state["target_user_id"]),
+                gift_id=str(state["gift_id"]),
+                text=state.get("gift_text", ""),
+                pay_for_upgrade=False,
+            )
+
+            sent_gift = gift_map.get(str(state["gift_id"]), {})
+
+            await q.message.edit_text(
+                f"<b>✅ Подарок отправлен</b>\n\n"
+                f"<b>Подарок:</b> {sent_gift.get('title', state['gift_id'])}\n"
+                f"<b>Кому:</b> <code>{state['target_user_id']}</code>\n"
+                f"<b>Текст:</b> {state.get('gift_text') or '—'}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[btn("⬅️ В админку", "admin_back", style="primary")]]
+                ),
+            )
+
+            add_history_record(
+                user_id=int(state["from_user_id"]),
+                username=q.from_user.username,
+                full_name=q.from_user.full_name,
+                sender_type="bot",
+                gift_id=str(state["gift_id"]),
+                gift_title=sent_gift.get("title", state["gift_id"]),
+                target_user_id=int(state["target_user_id"]),
+                gift_text=state.get("gift_text", ""),
+                price_stars=int(sent_gift.get("star_count", 0)),
+            )
+
+            user_states[chat_id] = {
+                "step": "admin",
+                "from_user_id": user_id,
+                "sender_type": "bot",
+            }
+
+            await q.answer("Отправлено")
+            return
+
+        except Exception as e:
+            await q.message.edit_text(
+                f"❌ <b>Ошибка отправки</b>\n\n<code>{str(e)[:3500]}</code>",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[btn("⬅️ В админку", "admin_back", style="danger")]]
+                ),
+            )
+            await q.answer()
+            return 
+        
+
+    if data == "admin_send_free":
+        if user_id != ADMIN_ID:
+            await q.answer()
+            return
+
+        state["admin_send_mode"] = True
+        state["step"] = "admin_send_choose_gift"
+
+        await q.message.edit_text(
+            "<b>🎁 Отправка подарка без оплаты</b>\n\n"
+            "⌵ Выберите подарок",
+            parse_mode="HTML",
+            reply_markup=gifts_keyboard(),
+        )
+        await q.answer()
+        return 
+    
 # =========================
 # PAYMENTS HANDLERS
 # =========================
@@ -2229,6 +2362,44 @@ async def any_message(message: Message):
         )
         return
     
+    if user_id == ADMIN_ID and step == "admin_send_recipient":
+        if not text.isdigit():
+            await message.answer(
+                "❌ Нужен numeric user_id.\nПример: <code>123456789</code>",
+                parse_mode="HTML",
+            )
+            return
+
+        state["target_user_id"] = int(text)
+        state["step"] = "admin_send_comment"
+
+        await message.answer(
+            "<b>💬 Комментарий к подарку</b>",
+            parse_mode="HTML",
+            reply_markup=admin_send_comment_keyboard(),
+        )
+        return
+    
+    if user_id == ADMIN_ID and step == "admin_send_comment_input":
+        if len(text) > 128:
+            await message.answer("❌ Текст слишком длинный. Максимум 128 символов.")
+            return
+
+        state["gift_text"] = text
+        state["step"] = "admin_send_confirm"
+
+        await message.answer(
+            build_summary(state),
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [btn("🎁 Отправить сейчас", "admin_send_now", style="success")],
+                    [btn("⬅️ Назад", "admin_back", style="danger")],
+                ]
+            ),
+        )
+        return
+
     if step == "broadcast_input_photo" and text == "-":
         state["bc_photo_file_id"] = ""
         state["step"] = "broadcast_builder"
@@ -2556,6 +2727,8 @@ async def any_message(message: Message):
             reply_markup=confirm_keyboard(state.get("sender_type", "bot")),
         )
         return
+    
+
 
 # =========================
 # STARTUP
