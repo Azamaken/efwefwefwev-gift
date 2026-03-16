@@ -782,8 +782,6 @@ def admin_add_gift_keyboard(state: dict) -> InlineKeyboardMarkup:
             [btn(f"📌 Закреп: {pinned}", "admin_toggle_pinned", style="success")],
             [btn("✅ Сохранить", "admin_save_gift", style="success")],
             [btn("⬅️ Отмена", "admin_back", style="danger")],
-            btn
-
         ]
     )
 
