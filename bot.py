@@ -902,10 +902,14 @@ def get_final_price(state: Dict[str, Any]) -> int:
     gift = gift_map.get(str(state["gift_id"]), {})
     base_price = int(gift.get("star_count", 0))
 
-    if state.get("admin_send_mode"):
-        return base_price
+    is_admin_send = state.get("admin_send_mode", False)
+    is_custom_comment = state.get("is_custom_comment", False)
+    is_self = state.get("target_user_id") == state.get("from_user_id")
 
-    extra = 5 if state.get("is_custom_comment", False) else 0
+    extra = 0
+    if not is_admin_send and is_custom_comment and not is_self:
+        extra = 5
+
     return base_price + extra
 
 def gifts_keyboard() -> InlineKeyboardMarkup:
@@ -1046,14 +1050,19 @@ def build_main_text() -> str:
 def build_summary(state: Dict[str, Any]) -> str:
     gift = gift_map.get(str(state["gift_id"]), {})
     title = gift.get("title", state["gift_id"])
-    stars = gift.get("star_count", 0)
+    stars = get_final_price(state)
+
     sender_type = state.get("sender_type", "bot")
-    sender_line = "<tg-emoji emoji-id='5355051922862653659'>🤖</tg-emoji> <b>Бот</b>" if sender_type == "bot" else f"👤 <b>@{ACCOUNT_USERNAME}</b>"
+    sender_line =  "<tg-emoji emoji-id='5355051922862653659'>🤖</tg-emoji> <b>Бот</b>" if sender_type == "bot" else f"👤 <b>@{ACCOUNT_USERNAME}</b>"
 
     target = "себе" if state.get("target_user_id") == state.get("from_user_id") else str(state.get("target_user_id"))
     text = state.get("gift_text") or "—"
 
-    price_line = f"<b>Цена:</b> {stars} <tg-emoji emoji-id='5310224206732996002'>⭐</tg-emoji>" if sender_type == "bot" else "<b>Оплата:</b> со Stars аккаунта"
+    extra_note = ""
+    if state.get("is_custom_comment") and state.get("target_user_id") != state.get("from_user_id") and not state.get("admin_send_mode", False):
+        extra_note = "\n<b>Надбавка за свой текст:</b> 5 <tg-emoji emoji-id='5310224206732996002'>"
+
+    price_line = f"<b>Цена:</b> {stars} <tg-emoji emoji-id='5310224206732996002'>⭐️</tg-emoji>" if sender_type == "bot" else "<b>Оплата:</b> со Stars аккаунта"
 
     return (
         "<b><tg-emoji emoji-id='5280615440928758599'>🎁</tg-emoji> Подтверждение заказа</b>\n\n"
@@ -1064,7 +1073,6 @@ def build_summary(state: Dict[str, Any]) -> str:
         f"<b>Текст:</b> {text}\n\n"
         "<blockquote>⌵ Проверьте всё внимательно перед отправкой.</blockquote>"
     )
-
 # =========================
 # PAYMENTS
 # =========================
@@ -1085,12 +1093,13 @@ async def create_stars_invoice(chat_id: int, state: Dict[str, Any], bot: Bot) ->
         "gift_text": state.get("gift_text", ""),
         "from_user_id": int(state["from_user_id"]),
         "sender_type": "bot",
+        "is_custom_comment": state.get("is_custom_comment", False),
     }
 
     await bot.send_invoice(
         chat_id=chat_id,
         title=gift["title"][:32],
-        description=f"Покупка подарка для {state['target_user_id']}",
+        description=f"Покупка подарка для {state['target_user_id']} ({stars} <tg-emoji emoji-id='5310224206732996002'>⭐️</tg-emoji>)",
         payload=payload,
         provider_token="",
         currency="XTR",
