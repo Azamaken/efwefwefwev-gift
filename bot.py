@@ -1099,7 +1099,7 @@ async def create_stars_invoice(chat_id: int, state: Dict[str, Any], bot: Bot) ->
     await bot.send_invoice(
         chat_id=chat_id,
         title=gift["title"][:32],
-        description=f"Покупка подарка для {state['target_user_id']} ({stars} <tg-emoji emoji-id='5310224206732996002'>⭐️</tg-emoji>)",
+        description=f"Покупка подарка для {state['target_user_id']} ({stars} ⭐)",
         payload=payload,
         provider_token="",
         currency="XTR",
