@@ -21,6 +21,7 @@ from datetime import datetime
 USE_ACCOUNT_MODE = os.getenv("USE_ACCOUNT_MODE", "1") == "1"
 if USE_ACCOUNT_MODE:
     from telethon import TelegramClient, functions, types
+    from telethon.errors import RPCError
 
 # =========================
 # CONFIG
@@ -205,25 +206,47 @@ async def resolve_account_peer(identifier: int | str):
     if account_client is None:
         raise RuntimeError("account_client не запущен")
 
-    if isinstance(identifier, int):
-        return await account_client.get_input_entity(identifier)
-
     text = str(identifier).strip()
-    if text.startswith("@"):
-        text = text[1:]
-    return await account_client.get_input_entity(text)
+
+    # username
+    if not text.isdigit():
+        if text.startswith("@"):
+            text = text[1:]
+
+        try:
+            return await account_client.get_input_entity(text)
+        except Exception:
+            raise RuntimeError(
+                f"Не удалось найти пользователя по username: @{text}"
+            )
+
+    try:
+        entity = await account_client.get_entity(int(text))
+        return await account_client.get_input_entity(entity)
+    except Exception:
+        raise RuntimeError(
+            "❌ Не удалось найти пользователя.\n\n"
+            "Проверь:\n"
+            "• правильный @username\n"
+            "• или чтобы аккаунт уже писал этому человеку\n"
+            "• или добавь его в контакты\n\n"
+            "💡 Лучше использовать @username"
+        )
 
 
 async def send_gift_via_account(
     *,
-    user_id: int,
+    target: int | str,
     gift_id: str,
     text: str = "",
 ) -> None:
     if account_client is None:
         raise RuntimeError("Режим аккаунта не включён")
 
-    peer = await resolve_account_peer(user_id)
+    if not account_client.is_connected():
+        raise RuntimeError("Аккаунт клиент не подключён")
+
+    peer = await resolve_account_peer(target)
 
     invoice = types.InputInvoiceStarGift(
         peer=peer,
@@ -235,11 +258,14 @@ async def send_gift_via_account(
         ),
     )
 
-    form = await account_client(functions.payments.GetPaymentFormRequest(invoice=invoice))
-    await account_client(functions.payments.SendStarsFormRequest(
-        form_id=form.form_id,
-        invoice=invoice,
-    ))
+    try:
+        form = await account_client(functions.payments.GetPaymentFormRequest(invoice=invoice))
+        await account_client(functions.payments.SendStarsFormRequest(
+            form_id=form.form_id,
+            invoice=invoice,
+        ))
+    except Exception as e:
+        raise RuntimeError(f"Ошибка при отправке подарка: {str(e)[:300]}") from e
 
 async def check_subs(bot,user_id):
 
@@ -1073,7 +1099,10 @@ def build_summary(state: Dict[str, Any]) -> str:
         extra_note = "\n<b>Надбавка за свой текст:</b> 5 <tg-emoji emoji-id='5310224206732996002'>"
 
     if state.get("admin_send_mode"):
-       price_line = "<b>Оплата:</b> без invoice, с баланса бота"
+       if sender_type == "bot":
+           price_line = "<b>Оплата:</b> без invoice, с баланса бота"
+       else:
+           price_line = "<b>Оплата:</b> без invoice, со Stars аккаунта"
     else:
        price_line = f"<b>Цена:</b> {stars} ⭐️" if sender_type == "bot" else "<b>Оплата:</b> со Stars аккаунта"
 
@@ -1690,7 +1719,7 @@ async def callbacks(q: CallbackQuery, bot: Bot):
                 )
  
                 await send_gift_via_account(
-                    user_id=int(state["target_user_id"]),
+                    target=state.get("target_input") or state.get("target_user_id"),
                     gift_id=str(state["gift_id"]),
                     text=state.get("gift_text", ""),
                 )
@@ -2154,46 +2183,57 @@ async def callbacks(q: CallbackQuery, bot: Bot):
                 parse_mode="HTML",
             )
 
-            await send_gift_via_bot(
-                user_id=int(state["target_user_id"]),
-                gift_id=str(state["gift_id"]),
-                text=state.get("gift_text", ""),
-                pay_for_upgrade=False,
-            )
+            sender_type = state.get("sender_type", "bot")
 
-            sent_gift = gift_map.get(str(state["gift_id"]), {})
+            if sender_type == "account":
+                await send_gift_via_account(
+                    target=state.get("target_input") or state.get("target_user_id"),
+                    gift_id=str(state["gift_id"]),
+                    text=state.get("gift_text", ""),
+                )
+            else:
+                await send_gift_via_bot(
+                    user_id=int(state["target_user_id"]),
+                    gift_id=str(state["gift_id"]),
+                    text=state.get("gift_text", ""),
+                    pay_for_upgrade=False,
+                )
 
-            await q.message.edit_text(
-                f"<b>✅ Подарок отправлен</b>\n\n"
-                f"<b>Подарок:</b> {sent_gift.get('title', state['gift_id'])}\n"
-                f"<b>Кому:</b> <code>{state['target_user_id']}</code>\n"
-                f"<b>Текст:</b> {state.get('gift_text') or '—'}",
-                parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup(
-                    inline_keyboard=[[btn("⬅️ В админку", "admin_back", style="primary")]]
-                ),
-            )
+                sent_gift = gift_map.get(str(state["gift_id"]), {})
+                sent_sender = "@" + ACCOUNT_USERNAME if sender_type == "account" else "бот"
 
-            add_history_record(
-                user_id=int(state["from_user_id"]),
-                username=q.from_user.username,
-                full_name=q.from_user.full_name,
-                sender_type="bot",
-                gift_id=str(state["gift_id"]),
-                gift_title=sent_gift.get("title", state["gift_id"]),
-                target_user_id=int(state["target_user_id"]),
-                gift_text=state.get("gift_text", ""),
-                price_stars=int(sent_gift.get("star_count", 0)),
-            )
+                await q.message.edit_text(
+                    f"<b>✅ Подарок отправлен</b>\n\n"
+                    f"<b>Отправитель:</b> {sent_sender}\n"
+                    f"<b>Подарок:</b> {sent_gift.get('title', state['gift_id'])}\n"
+                    f"<b>Кому:</b> <code>{state['target_user_id']}</code>\n"
+                    f"<b>Текст:</b> {state.get('gift_text') or '—'}",
+                    parse_mode="HTML",
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard=[[btn("⬅️ В админку", "admin_back", style="primary")]]
+                    ),
+                )
 
-            user_states[chat_id] = {
-                "step": "admin",
-                "from_user_id": user_id,
-                "sender_type": "bot",
-            }
+                add_history_record(
+                    user_id=int(state["from_user_id"]),
+                    username=q.from_user.username,
+                    full_name=q.from_user.full_name,
+                    sender_type=sender_type,
+                    gift_id=str(state["gift_id"]),
+                    gift_title=sent_gift.get("title", state["gift_id"]),
+                    target_user_id=int(state["target_user_id"]),
+                    gift_text=state.get("gift_text", ""),
+                    price_stars=int(sent_gift.get("star_count", 0)),
+                )
 
-            await q.answer("Отправлено")
-            return
+                user_states[chat_id] = {
+                    "step": "admin",
+                    "from_user_id": user_id,
+                    "sender_type": sender_type,
+                }
+
+                await q.answer("Отправлено")
+                return
 
         except Exception as e:
             await q.message.edit_text(
